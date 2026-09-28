@@ -1,0 +1,22 @@
+{
+  "name": "double-dribble-browser-recreation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An independent five-on-five pixel basketball recreation, with a WebGPU sprite renderer and no runtime dependencies.",
+  "license": "MIT",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "node --test tests/*.test.mjs && node scripts/build.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wieslawsoltes/DoubleDribbleWeb.git"
+  },
+  "homepage": "https://wieslawsoltes.github.io/DoubleDribbleWeb/"
+}

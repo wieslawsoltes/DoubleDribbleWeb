@@ -1,0 +1,141 @@
+{
+  "environment": {
+    "backend": "Canvas 2D",
+    "gpuExposed": false,
+    "secure": false,
+    "storage": "in-memory test double",
+    "reason": "WebGPU is unavailable in this browser"
+  },
+  "checks": [
+    {
+      "name": "standalone HTML boots and renders without external assets",
+      "passed": true
+    },
+    {
+      "name": "desktop layout has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "native game canvas is 256 x 240",
+      "passed": true
+    },
+    {
+      "name": "setup controls start the selected two-player match",
+      "passed": true
+    },
+    {
+      "name": "Enter pauses a running match",
+      "passed": true
+    },
+    {
+      "name": "paused simulation does not advance",
+      "passed": true
+    },
+    {
+      "name": "help dialog pauses and suspends game input",
+      "passed": true
+    },
+    {
+      "name": "closing help resumes the previously running match",
+      "passed": true
+    },
+    {
+      "name": "keyboard movement controls the ball carrier",
+      "passed": true
+    },
+    {
+      "name": "holding Z charges a jump shot",
+      "passed": true
+    },
+    {
+      "name": "releasing Z shoots the ball",
+      "passed": true
+    },
+    {
+      "name": "X passes to an aimed teammate",
+      "passed": true
+    },
+    {
+      "name": "player two has independent movement keys",
+      "passed": true
+    },
+    {
+      "name": "player two can charge shots independently",
+      "passed": true
+    },
+    {
+      "name": "save contains the complete paused simulation and RNG",
+      "passed": true
+    },
+    {
+      "name": "home offers a resumable match",
+      "passed": true
+    },
+    {
+      "name": "resume restores the saved match",
+      "passed": true
+    },
+    {
+      "name": "replacing a live match requires confirmation",
+      "passed": true
+    },
+    {
+      "name": "canceling reset keeps the original match",
+      "passed": true
+    },
+    {
+      "name": "CRT option changes only presentation",
+      "passed": true
+    },
+    {
+      "name": "mute option persists in preferences",
+      "passed": true
+    },
+    {
+      "name": "halftime scene renders",
+      "passed": true
+    },
+    {
+      "name": "final score and three-digit scores render",
+      "passed": true
+    },
+    {
+      "name": "dunk close-up scene renders",
+      "passed": true
+    },
+    {
+      "name": "winning a championship match advances the difficulty",
+      "passed": true
+    },
+    {
+      "name": "standard gamepad axes and A button map correctly",
+      "passed": true
+    },
+    {
+      "name": "mobile layout has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "mobile touch controls are visible",
+      "passed": true
+    },
+    {
+      "name": "emulated multitouch holds movement and shoot simultaneously",
+      "passed": true
+    },
+    {
+      "name": "touch release clears both captured pointers",
+      "passed": true
+    },
+    {
+      "name": "320px narrow layout has no horizontal overflow",
+      "passed": true
+    },
+    {
+      "name": "no uncaught JavaScript errors across desktop and mobile tests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": []
+}

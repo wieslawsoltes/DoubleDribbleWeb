@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10151c">
+  <meta name="description" content="An independently built, five-on-five pixel basketball game for the browser. WebGPU rendering, local two-player matches, three CPU levels, and original pixel art.">
+  <title>Double Dribble — Browser Recreation</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310151c'/%3E%3Ccircle cx='16' cy='16' r='11' fill='%23f6aa57'/%3E%3Cpath d='M5 16h22M16 5v22M8 8q16 8 0 16M24 8q-16 8 0 16' fill='none' stroke='%2310151c' stroke-width='1.8'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="#" id="brand-home" aria-label="Double Dribble home">
+        <svg class="brand-ball" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17"/><path d="M3 20h34M20 3v34M8 8q24 12 0 24M32 8q-24 12 0 24"/></svg>
+        <span class="brand-type"><strong>DOUBLE DRIBBLE<span class="brand-dot">.</span></strong><span>THE BROWSER RECREATION <i>VOL. 01</i></span></span>
+      </a>
+      <nav class="toolbar" aria-label="Game tools">
+        <span class="engine-pill" id="engine-pill"><i></i><span id="renderer-name">STARTING</span></span>
+        <button class="icon-button" id="sound-button" aria-label="Mute sound" title="Sound (V)" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4zM15 8a6 6 0 0 1 0 8M18 5a10 10 0 0 1 0 14"/></svg></button>
+        <button class="icon-button" id="fullscreen-button" aria-label="Fullscreen" title="Fullscreen (F)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+        <button class="icon-button" id="help-button" aria-label="How to play" title="How to play (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2l-1.5 1.5V14m0 3h.01"/></svg></button>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <section class="play-area" aria-label="Basketball game">
+        <div class="stage-shell" id="stage-shell">
+          <div class="stage-topline"><span><i class="live-dot"></i><span id="play-state">ATTRACT MODE</span></span><span id="stage-detail">5 ON 5 · 8-BIT BASKETBALL</span><button id="pause-button" class="stage-pause" aria-label="Pause game" title="Pause (Enter)">Ⅱ</button></div>
+          <div class="screen-surround">
+            <div class="screen-window" id="screen-window" tabindex="0" aria-label="Basketball game. Arrow keys move, Z shoots or switches, X passes or steals, Enter pauses.">
+              <canvas id="gpu-canvas" width="256" height="240" role="img" aria-label="Live basketball court"></canvas>
+              <canvas id="fallback-canvas" width="256" height="240" role="img" aria-label="Live basketball court" hidden></canvas>
+              <div class="boot-message" id="boot-message"><span class="boot-ball"></span><strong>TAKING THE COURT</strong><span>Loading the pixel engine…</span></div>
+            </div>
+          </div>
+          <div class="stage-bottomline"><span id="game-context">PICK YOUR TEAM. TAKE THE COURT.</span><span class="frame-stat"><span id="fps">—</span> FPS <i>/</i> 256 × 240</span></div>
+          <div class="touch-controls" id="touch-controls">
+            <div class="touch-stick" id="touch-stick" aria-label="Movement joystick"><span class="stick-cross"></span><span class="stick-center" id="stick-knob"></span><span class="direction-up">▲</span><span class="direction-down">▼</span><span class="direction-left">◀</span><span class="direction-right">▶</span></div>
+            <button id="touch-pause" class="touch-pause" aria-label="Pause">START</button>
+            <div class="touch-actions"><div class="touch-action-b"><button class="touch-button" data-pad="b" aria-label="Hold B to jump; release to shoot. B switches defenders.">B</button><span>SHOOT / SWITCH</span></div><div class="touch-action-a"><button class="touch-button" data-pad="a" aria-label="A passes on offense and steals on defense">A</button><span>PASS / STEAL</span></div></div>
+          </div>
+        </div>
+        <div class="under-game">
+          <span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> MOVE <span class="divider">/</span> <kbd>Z</kbd> SHOOT <span class="divider">/</span> <kbd>X</kbd> PASS</span>
+          <button id="touch-toggle" class="text-button" aria-pressed="false">TOUCH CONTROLS</button>
+        </div>
+        <div class="tip-strip"><span class="tip-label">COURTSIDE TIP</span><p id="coach-tip">Hold <b>Z</b> to jump. Release at the top to shoot. Get close to the hoop for a slam.</p></div>
+        <div class="visually-hidden" id="announcer" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="panel-title"><span id="panel-title">MATCH SETUP</span><span class="panel-number">01—03</span></div>
+        <div class="tabs" role="tablist" aria-label="Match panel"><button id="setup-tab" class="active" role="tab" aria-selected="true" aria-controls="setup-panel">SETUP</button><button id="stats-tab" role="tab" aria-selected="false" aria-controls="stats-panel">BOX SCORE</button></div>
+        <section id="setup-panel" role="tabpanel" aria-labelledby="setup-tab">
+          <div class="field"><label>GAME MODE</label><div class="mode-grid" id="mode-options"><button data-mode="single" class="active">1 PLAYER</button><button data-mode="versus">2 PLAYERS</button><button data-mode="championship">CHAMPIONSHIP</button><button data-mode="practice">PRACTICE</button></div></div>
+          <div class="field team-field"><label>YOUR TEAM <span>PLAYER 1</span></label><div class="team-grid" id="team-options">
+            <button data-team="0" class="team-card" style="--jersey:#23a65a;--trim:#f6edcd"><span class="jersey"><i>4</i></span><span><strong>BOSTON</strong><small>FROGS</small></span><span class="team-check">✓</span></button>
+            <button data-team="1" class="team-card active" style="--jersey:#edeade;--trim:#2161c5"><span class="jersey"><i>7</i></span><span><strong>NEW YORK</strong><small>EAGLES</small></span><span class="team-check">✓</span></button>
+            <button data-team="2" class="team-card" style="--jersey:#ec5835;--trim:#f9ebcd"><span class="jersey"><i>9</i></span><span><strong>CHICAGO</strong><small>OX</small></span><span class="team-check">✓</span></button>
+            <button data-team="3" class="team-card" style="--jersey:#efbb3c;--trim:#7656af"><span class="jersey"><i>11</i></span><span><strong>LOS ANGELES</strong><small>BREAKERS</small></span><span class="team-check">✓</span></button>
+          </div></div>
+          <div class="opponent-row"><span id="opponent-label">CPU OPPONENT</span><select id="opponent-select" aria-label="Opponent team"><option value="0">BOSTON</option><option value="1">NEW YORK</option><option value="2">CHICAGO</option><option value="3">LOS ANGELES</option></select></div>
+          <div class="field"><label>DIFFICULTY <span id="level-description">LEARN THE COURT</span></label><div class="segmented" id="level-options"><button data-level="1" class="active">LEVEL 1</button><button data-level="2">LEVEL 2</button><button data-level="3">LEVEL 3</button></div></div>
+          <div class="field"><label>PERIOD LENGTH <span>4 PERIODS</span></label><div class="segmented" id="time-options"><button data-minutes="5" class="active">5:00</button><button data-minutes="10">10:00</button><button data-minutes="20">20:00</button><button data-minutes="30">30:00</button></div></div>
+          <label class="check-row"><input type="checkbox" id="quick-clock"><span>Quick clock <small>3× match clock</small></span></label>
+          <button class="primary-button" id="start-button"><span id="start-label">TIP OFF</span><span aria-hidden="true">↗</span></button>
+          <button class="resume-button" id="resume-button" hidden>RESUME SAVED MATCH <span>→</span></button>
+          <p class="start-caption" id="start-caption">OR PRESS ENTER TO PLAY</p>
+        </section>
+        <section id="stats-panel" role="tabpanel" aria-labelledby="stats-tab" hidden>
+          <div class="match-score"><div><span id="stats-home">NY</span><strong id="stats-score-home">00</strong></div><span class="score-dash">:</span><div><span id="stats-away">BOS</span><strong id="stats-score-away">00</strong></div></div>
+          <div id="stats-period" class="stats-period">PERIOD 1 · 05:00</div>
+          <table class="stats-table"><thead><tr><th>TEAM STATS</th><th id="stats-th-home">NY</th><th id="stats-th-away">BOS</th></tr></thead><tbody id="stats-body"></tbody></table>
+          <div class="possession-line"><i></i><span id="possession-text">WAITING FOR TIP-OFF</span></div>
+          <button class="primary-button" id="stats-pause-button"><span id="stats-pause-label">PAUSE GAME</span><span>Ⅱ</span></button>
+          <button class="resume-button" id="new-match-button">MATCH SETUP <span>→</span></button>
+        </section>
+
+        <section class="settings-panel" aria-label="Display settings">
+          <div class="setting-row"><label for="crt-toggle">CRT SCANLINES</label><button class="switch" id="crt-toggle" role="switch" aria-checked="false" aria-label="CRT scanlines"><span></span></button></div>
+          <div class="setting-row"><label for="guides-toggle">SHOT TIMING GUIDE</label><button class="switch" id="guides-toggle" role="switch" aria-checked="true" aria-label="Shot timing guide"><span></span></button></div>
+          <div class="setting-row volume-row"><label for="volume">VOLUME</label><input type="range" min="0" max="100" value="38" id="volume" aria-label="Volume"></div>
+        </section>
+        <div class="career" id="career-panel"><div><span>CHAMPIONSHIP</span><strong id="career-text">THREE LEVELS. ONE TROPHY.</strong></div><div class="medals" aria-label="Trophy progress"><i data-medal="1" title="Beat level 1">I</i><i data-medal="2" title="Beat level 2">II</i><i data-medal="3" title="Beat level 3">III</i></div></div>
+        <p class="player-two-hint" id="player-two-hint" hidden><b>PLAYER 2</b> I J K L to move · N to shoot · M to pass. Two gamepads also supported.</p>
+      </aside>
+    </main>
+    <footer class="app-footer"><span>ORIGINAL CODE & PIXEL ART <i>·</i> NO ROM REQUIRED</span><span><button id="about-button" class="text-button">FIDELITY NOTES</button><i>·</i> INDEPENDENT / v0.1.0</span></footer>
+    <div class="toast" id="toast" role="status" hidden></div>
+  </div>
+
+  <dialog id="help-dialog" class="help-dialog">
+    <div class="dialog-heading"><span>THE PLAYBOOK</span><button data-close="help-dialog" class="icon-button" aria-label="Close help">×</button></div>
+    <h2>Simple controls.<br>A whole court to master.</h2>
+    <div class="help-controls"><div><kbd>↑ ← ↓ →</kbd><strong>Move</strong><p>Arrow keys or W A S D. Only the marked player follows your input.</p></div><div><kbd>Z</kbd><strong>Shoot / switch</strong><p>Hold to jump, release near the top. On defense, select the player closest to the ball.</p></div><div><kbd>X</kbd><strong>Pass / steal</strong><p>Aim toward a teammate and pass. On defense, get in front of the ball carrier and steal.</p></div></div>
+    <div class="help-note"><b>THE SLAM</b> Drive close to the rim with space to finish. In the close-up, release Z at the top of the jump. There are three dunk animations.</div>
+    <div class="help-note"><b>THE RULES</b> Four periods. Two or three points per basket. Get across half court in 10 seconds and attempt a shot within 24. Inbound with X within five seconds. Holding a jump too long is traveling. Reaching from behind can draw a foul.</div>
+    <div class="help-note"><b>TWO PLAYERS</b> Player 2 uses I J K L to move, N to shoot/switch and M to pass/steal. On standard gamepads, A passes, B shoots and Start pauses. Touch controls operate Player 1.</div>
+    <div class="help-shortcuts"><span><kbd>ENTER</kbd> START / PAUSE</span><span><kbd>F</kbd> FULLSCREEN</span><span><kbd>V</kbd> SOUND</span></div>
+    <button class="primary-button" data-close="help-dialog">BACK TO THE COURT <span>↗</span></button>
+  </dialog>
+  <dialog id="about-dialog" class="help-dialog">
+    <div class="dialog-heading"><span>ABOUT THIS BUILD</span><button data-close="about-dialog" class="icon-button" aria-label="Close fidelity notes">×</button></div>
+    <h2>An independent<br>browser recreation.</h2>
+    <p>This is a new HTML / JavaScript implementation with original pixel art, synthesized audio, and an instanced WebGPU sprite renderer. It is not an emulator and contains no ROM, extracted sprites, or original recordings.</p>
+    <p>The reference is the NES version of Double Dribble, released in 1987; the arcade original dates to 1986. The NES manual informed the controls, teams, period choices, three CPU difficulty levels, inbounds, shooting, and violations.</p>
+    <p><strong>This build is not pixel-perfect or gameplay-perfect.</strong> Sprite poses, AI decisions, probabilities, collision behavior, clock behavior, close-ups, fouls, audio, menus, and trophy progression are independently reconstructed. They have not been compared frame by frame against an original cartridge.</p>
+    <p>Practice, the difficulty-ladder championship, auto-save, optional timing guides, and the surrounding browser interface are additions. Overtime and foul-bonus behavior are implementation choices, not verified original-game rules.</p>
+    <p>Double Dribble is a Konami game. This independent project is not affiliated with or endorsed by Konami or Nintendo. The original implementation code and original artwork in this package are MIT-licensed; no third-party trademark rights are granted.</p>
+    <button class="primary-button" data-close="about-dialog">BACK TO THE COURT <span>↗</span></button>
+  </dialog>
+  <dialog id="reset-dialog" class="help-dialog compact-dialog"><div class="dialog-heading"><span>NEW MATCH</span></div><h2>Start over?</h2><p>A new match will replace your current game and its local save.</p><button class="primary-button" id="confirm-reset">START NEW MATCH <span>↗</span></button><button class="resume-button" data-close="reset-dialog">KEEP PLAYING</button></dialog>
+  <noscript><div class="noscript">Enable JavaScript to play this game. The full source is included in the package.</div></noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

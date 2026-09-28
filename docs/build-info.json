@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "date": "2026-09-28",
+  "node_tests_passed": 59,
+  "browser_checks_passed": 32,
+  "browser_backend_tested": "Canvas 2D",
+  "webgpu_runtime_tested": false,
+  "original_rom_differential_tested": false,
+  "standalone_bytes": 143705,
+  "standalone_sha256": "c3e49edbaf25751e944c2675fd57fa7f174fe6387756bf5f941bb3b79a71dd24"
+}
