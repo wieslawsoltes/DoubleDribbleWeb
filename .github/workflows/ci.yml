@@ -1,0 +1,119 @@
+name: Build, test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Unit tests and standalone build
+        run: npm run check
+      - name: Chromium integration tests
+        run: |
+          python3 -m venv "$RUNNER_TEMP/browser-venv"
+          source "$RUNNER_TEMP/browser-venv/bin/activate"
+          python -m pip install -r tests/requirements.txt
+          python -m playwright install --with-deps chromium
+          python tests/browser_smoke.py
+      - name: Upload standalone game
+        uses: actions/upload-artifact@v7
+        with:
+          name: double-dribble-standalone
+          path: dist/
+          include-hidden-files: true
+          if-no-files-found: error
+      - name: Upload browser report and previews
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-verification
+          path: |
+            docs/browser-test-results.json
+            docs/preview-*.png
+          if-no-files-found: error
+      - name: Upload Pages site
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy and verify GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+      - name: Publish the tested site
+        id: deployment
+        uses: actions/deploy-pages@v5
+      - name: Verify the public site and build identity
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, time, urllib.request
+          from datetime import datetime, timezone
+          base = os.environ['SITE_URL'].rstrip('/') + '/'
+          commit = os.environ['GITHUB_SHA']
+          for attempt in range(12):
+              try:
+                  def get(path):
+                      request = urllib.request.Request(base + path + '?build=' + commit, headers={'Cache-Control': 'no-cache'})
+                      with urllib.request.urlopen(request, timeout=15) as response:
+                          assert response.status == 200
+                          return response.read()
+                  info = json.loads(get('build-info.json'))
+                  assert info['sourceCommit'] == commit, 'Previous build is still cached'
+                  html = get('')
+                  assert b'<title>Double Dribble' in html, 'Unexpected page content'
+                  assert hashlib.sha256(html).hexdigest() == info['htmlSha256'], 'Published HTML checksum mismatch'
+                  result = {'url': base, 'sourceCommit': commit, 'htmlSha256': info['htmlSha256'], 'httpStatus': 200, 'verifiedAt': datetime.now(timezone.utc).isoformat()}
+                  with open('deployment-verification.json', 'w') as output:
+                      json.dump(result, output, indent=2)
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                      summary.write(f'## Published and verified\n\n[Play Double Dribble Web]({base})\n\nSource commit: `{commit}`\n\nPublic HTML SHA-256: `{info["htmlSha256"]}`\n')
+                  print(json.dumps(result, indent=2))
+                  break
+              except Exception as error:
+                  if attempt == 11:
+                      raise
+                  print(f'Public site not updated yet: {error}')
+                  time.sleep(5)
+          PY
+      - name: Upload deployment verification
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-verification
+          path: deployment-verification.json
+          if-no-files-found: error
